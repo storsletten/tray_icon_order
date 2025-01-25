@@ -1,4 +1,4 @@
-$baseKey = "HKCU:\Control Panel\NotifyIconSettings"
+$baseKey = "HKCU:\\Control Panel\\NotifyIconSettings"
 $filePath = "order.txt"
 
 $uiOrderListBytes = (Get-ItemProperty -Path $baseKey -Name UIOrderList).UIOrderList
@@ -18,19 +18,22 @@ for ($i = 0; $i -lt $uiOrderListBytes.Length; $i += 8) {
  try {
   $executablePath = (Get-ItemProperty -Path $subKeyPath -Name ExecutablePath -ErrorAction Stop).ExecutablePath
  } catch {
-  $executablePath = "<ExecutablePath not found>"
+  Write-Host "Failed to read ExecutablePath from registry key: $subKeyPath"
+  continue
  }
 
  $clsidMatch = [Regex]::Match($executablePath, "^\{[0-9A-Fa-f\-]+\}\\")
  if ($clsidMatch.Success) {
   $clsid = $clsidMatch.Value.TrimEnd("\\")
-  $name = $executablePath.Substring($clsid.Length + 1)
+  $path = $executablePath.Substring($clsid.Length + 1)
  } else {
-  $clsid = ""
-  $name = $executablePath
+  $clsid = "<No CLSID>"
+  $path = $executablePath
  }
 
- $textLines += "$name . $clsid $number"
+ $name = [System.IO.Path]::GetFileNameWithoutExtension($path)
+
+ $textLines += "$name, $path, $clsid, $number"
 }
 
 $textLines | Out-File -FilePath $filePath -Encoding UTF8
